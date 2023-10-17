@@ -1,6 +1,7 @@
 import random
 import sys
 import time
+import math
 
 import pygame as pg
 
@@ -41,6 +42,7 @@ class Bird:
         引数1 num：こうかとん画像ファイル名の番号
         引数2 xy：こうかとん画像の位置座標タプル
         """
+        self.dire = (+5, 0)
         img0 = pg.transform.rotozoom(pg.image.load(f"ex03/fig/{num}.png"), 0, 2.0)
         img = pg.transform.flip(img0, True, False)  # デフォルトのこうかとん（右向き）
         self.imgs = {  # 0度から反時計回りに定義
@@ -77,11 +79,13 @@ class Bird:
             if key_lst[k]:
                 sum_mv[0] += mv[0]
                 sum_mv[1] += mv[1]
+        if sum_mv != [0, 0]:
+            self.dire = (sum_mv[0], sum_mv[1])  # 移動量に合わせて方向を更新
+            self.img = self.imgs[self.dire]
         self.rct.move_ip(sum_mv)
         if check_bound(self.rct) != (True, True):
             self.rct.move_ip(-sum_mv[0], -sum_mv[1])
-        if not (sum_mv[0] == 0 and sum_mv[1] == 0):
-            self.img = self.imgs[tuple(sum_mv)]
+
         screen.blit(self.img, self.rct)
 
 
@@ -91,11 +95,21 @@ class Beam:
         ビーム画像Surfaceを生成する
         引数 bird：こうかとんインスタンス（Birdクラスのインスタンス）
         """
-        self.img = pg.image.load(f"ex03/fig/beam.png")
+        vx, vy = bird.dire
+        angle = math.atan2(-vy, vx)
+        angle_deg = math.degrees(angle)
+        self.img1 = pg.image.load(f"ex03/fig/beam.png")
+        self.img = pg.transform.rotozoom(self.img1, angle_deg, 1.0)
         self.rct = self.img.get_rect()
         self.rct.left = bird.rct.right  # こうかとんの右横座標
         self.rct.centery = bird.rct.centery  # こうかとんの中心縦座標
         self.vx, self.vy = +5, 0
+
+        width, height = bird.rct.width, bird.rct.height
+        self.rct = self.img.get_rect()
+        self.rct.centerx = bird.rct.centerx + (width * bird.dire[0] / 5)  # ビームの中心横座標
+        self.rct.centery = bird.rct.centery + (height * bird.dire[1] / 5)  # ビームの中心縦座標
+        self.vx, self.vy = bird.dire
 
     def update(self, screen: pg.Surface):
         """
@@ -177,7 +191,7 @@ def main():
                     bombs[i] = None
                     bird.change_img(6, screen)
                     pg.display.update()
-        bombs = [bomb for bomb in bombs if bomb is not None] 
+        bombs = [bomb for bomb in bombs if bomb is not None]
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
